@@ -1,0 +1,198 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import {
+  getDatabase, ref, onValue, update
+} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+
+import { firebaseConfig } from './config.js';
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+
+const machineNames = [
+  "NH01", "NH06", "RBD_CU", "RBD11", "SC01", "SC02", "SC03", "SKET",
+  "DT08", "DT09", "HAMANA", "FS03", "FS08", "FS09", "HV Sheathing", "MV01", "MV02"
+];
+
+const machineContainer = document.getElementById('machine-container');
+const machines = {};
+let currentRole = null;
+
+// Format time
+function formatTime(seconds) {
+  const hrs = String(Math.floor(seconds / 3600)).padStart(2, '0');
+  const mins = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+  const secs = String(seconds % 60).padStart(2, '0');
+  return `${hrs}:${mins}:${secs}`;
+}
+
+// Update timer display and styling
+function updateDisplay(id) {
+  const m = machines[id];
+  document.getElementById(`electrical-${id}`).innerText = formatTime(m.electricalTime);
+  document.getElementById(`mechanical-${id}`).innerText = formatTime(m.mechanicalTime);
+
+  const el = document.getElementById(`machine-${id}`);
+  el.classList.remove('electrical', 'mechanical', 'blink-electrical', 'blink-mechanical');
+
+  if (m.status === 'Electrical' && m.timer) el.classList.add('electrical', 'blink-electrical');
+  if (m.status === 'Mechanical' && m.timer) el.classList.add('mechanical', 'blink-mechanical');
+}
+
+function updateStatus(id, status) {
+  update(ref(db, 'machines/' + id), { status });
+}
+
+function startTimer(id) {
+  const m = machines[id];
+  if (m.timer || m.status === 'None') return;
+  m.timer = setInterval(() => {
+    if (m.status === 'Electrical') m.electricalTime++;
+    if (m.status === 'Mechanical') m.mechanicalTime++;
+    update(ref(db, 'machines/' + id), {
+      electricalTime: m.electricalTime,
+      mechanicalTime: m.mechanicalTime
+    });
+  }, 1000);
+}
+
+function stopTimer(id) {
+  clearInterval(machines[id].timer);
+  machines[id].timer = null;
+  const el = document.getElementById(`machine-${id}`);
+  el.classList.remove('blink-electrical', 'blink-mechanical');
+}
+
+function resetTimer(id) {
+  stopTimer(id);
+  update(ref(db, 'machines/' + id), {
+    electricalTime: 0,
+    mechanicalTime: 0,
+    status: "None"
+  });
+}
+
+function resetAllMachines() {
+  if (currentRole !== "admin") return;
+  machineNames.forEach(name => {
+    update(ref(db, 'machines/' + name), {
+      electricalTime: 0,
+      mechanicalTime: 0,
+      status: "None"
+    });
+  });
+}
+
+function createMachineCard(id) {
+  const div = document.createElement('div');
+  div.className = 'machine';
+  div.id = `machine-${id}`;
+  div.innerHTML = `
+    <h3>${id}</h3>
+    <select onchange="updateStatus('${id}', this.value)">
+        <option value="None">None</option>
+        <option value="Electrical">Electrical</option>
+        <option value="Mechanical">Mechanical</option>
+    </select>
+    <div class="button-group">
+        <button class="start-btn" onclick="startTimer('${id}')">Start</button>
+        <button class="stop-btn" onclick="stopTimer('${id}')">Stop</button>
+        <button class="reset-btn" onclick="resetTimer('${id}')">Reset</button>
+    </div>
+    <div class="timers">
+        <p>Electrical Idle: <span id="electrical-${id}">00:00:00</span></p>
+        <p>Mechanical Idle: <span id="mechanical-${id}">00:00:00</span></p>
+    </div>`;
+  machineContainer.appendChild(div);
+}
+
+// Auth Functions
+window.login = () => {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  signInWithEmailAndPassword(auth, email, password)
+    .catch(e => alert("Login failed: " + e.message));
+};
+
+window.logout = () => {
+    signOut(auth).then(() => {
+      // Show login form again after logout
+      document.getElementById("login-card").style.display = "block";
+      document.getElementById("user-info").style.display = "none";
+      document.getElementById("dashboard-section").style.display = "none";
+    });
+  };
+  
+
+function setRoleUI(role) {
+    currentRole = role;
+    document.getElementById("user-role-label").innerText = `Logged in as ${role}`;
+  
+    const isAdmin = role === "admin";
+    const buttons = document.querySelectorAll(".start-btn, .stop-btn, .reset-btn, select");
+    buttons.forEach(btn => btn.disabled = !isAdmin);
+    document.getElementById("reset-all-btn").style.display = isAdmin ? "inline-block" : "none";
+  }
+  
+
+// Auth State
+onAuthStateChanged(auth, user => {
+    const loginForm = document.getElementById("login-form");
+    const loginCard = document.getElementById("login-card");
+    const userInfo = document.getElementById("user-info");
+    const dashboard = document.getElementById("dashboard-section");
+  
+    if (!user) {
+      loginForm.style.display = "flex";
+      userInfo.style.display = "none";
+      dashboard.style.display = "none";
+      currentRole = null;
+      return;
+    }
+  
+    // Fetch role and THEN show dashboard
+    onValue(ref(db, 'roles/' + user.uid), snapshot => {
+      const role = snapshot.val() || "viewer";
+      setRoleUI(role);
+      loginForm.style.display = "none";
+      loginCard.style.display = "none";
+      userInfo.style.display = "flex";
+      dashboard.style.display = "block";
+    });
+  });
+  
+
+// Global access for HTML buttons
+window.updateStatus = updateStatus;
+window.startTimer = startTimer;
+window.stopTimer = stopTimer;
+window.resetTimer = resetTimer;
+window.resetAllMachines = resetAllMachines;
+
+// Init Machines
+machineNames.forEach(name => {
+  machines[name] = {
+    name,
+    status: "None",
+    electricalTime: 0,
+    mechanicalTime: 0,
+    timer: null
+  };
+  createMachineCard(name);
+
+  onValue(ref(db, 'machines/' + name), snapshot => {
+    const data = snapshot.val();
+    if (!data) return;
+    const m = machines[name];
+    m.status = data.status || "None";
+    m.electricalTime = data.electricalTime || 0;
+    m.mechanicalTime = data.mechanicalTime || 0;
+
+    document.querySelector(`#machine-${name} select`).value = m.status;
+    updateDisplay(name);
+    if (m.status !== "None" && !m.timer) startTimer(name);
+  });
+});
