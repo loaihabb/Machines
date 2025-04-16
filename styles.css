@@ -282,8 +282,8 @@ select {
     }
 
     .machine {
-        width: 120%;
-        max-width: 320px; /* keeps cards from getting too wide */
+        width: 100%;
+        max-width: 340px; /* keeps cards from getting too wide */
         box-sizing: border-box;
     }
 
