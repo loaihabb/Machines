@@ -146,6 +146,12 @@ function setRoleUI(role) {
     const isAdmin = role === "admin";
     const buttons = document.querySelectorAll(".start-btn, .stop-btn, .reset-btn, select");
     buttons.forEach(btn => btn.disabled = !isAdmin);
+    
+    // Hide the entire button group for viewers
+    const buttonGroups = document.querySelectorAll(".button-group");
+    buttonGroups.forEach(group => {
+      group.style.display = isAdmin ? "flex" : "none";
+    });
     document.getElementById("reset-all-btn").style.display = isAdmin ? "inline-block" : "none";
   }
   
