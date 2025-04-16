@@ -276,13 +276,13 @@ select {
     #machine-container {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 10px;
+        gap: 5px;
         padding: 10px;
         justify-items: center; /* centers cards horizontally */
     }
 
     .machine {
-        width: 100%;
+        width: 110%;
         max-width: 340px; /* keeps cards from getting too wide */
         box-sizing: border-box;
     }
