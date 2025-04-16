@@ -6,7 +6,19 @@ import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 
-import { firebaseConfig } from './config.js';
+// import { firebaseConfig } from './config.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC-0rSSOTjf1d_klfRUgcjpqAWA1kuBWC0",
+  authDomain: "machines-b2a4e.firebaseapp.com",
+  projectId: "machines-b2a4e",
+  storageBucket: "machines-b2a4e.appspot.com",
+  messagingSenderId: 84871116813,
+  appId: "1:84871116813:web:47d1162f322d86555e7d44",
+  measurementId: "G-JZNK7Z0ZR1",
+  databaseURL: "https://machines-b2a4e-default-rtdb.firebaseio.com/"
+};
+
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
