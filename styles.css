@@ -273,6 +273,12 @@ select {
 }
 
 @media (max-width: 480px) {
+    body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background-color: #f8f8f8; /* optional for contrast */
+    }
     #machine-container {
         display: grid;
         grid-template-columns: 1fr;
