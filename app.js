@@ -167,8 +167,8 @@ function setRoleUI(role) {
       group.style.display = isAdmin ? "flex" : "none";
     });
     document.getElementById("reset-all-btn").style.display = isAdmin ? "inline-block" : "none";
-    document.getElementById("time-unit-selector").style.display = isAdmin ? "inline-block" : "none";
-    document.getElementById("generate-graph-btn").style.display = isAdmin ? "inline-block" : "none";
+    // document.getElementById("time-unit-selector").style.display = isAdmin ? "inline-block" : "none";
+    // document.getElementById("generate-graph-btn").style.display = isAdmin ? "inline-block" : "none";
 
   }
   
