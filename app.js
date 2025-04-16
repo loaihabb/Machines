@@ -45,9 +45,9 @@ function formatTime(seconds) {
 function updateDisplay(id) {
   const m = machines[id];
 
-  // Update the live time for electrical and mechanical timers
-  document.getElementById(`electrical-${id}`).innerText = formatTime(m.tempElectrical || m.electricalTime);
-  document.getElementById(`mechanical-${id}`).innerText = formatTime(m.tempMechanical || m.mechanicalTime);
+  // Use ?? instead of || to allow 0 values to show correctly
+  document.getElementById(`electrical-${id}`).innerText = formatTime(m.tempElectrical ?? m.electricalTime);
+  document.getElementById(`mechanical-${id}`).innerText = formatTime(m.tempMechanical ?? m.mechanicalTime);
 
   const el = document.getElementById(`machine-${id}`);
   el.classList.remove('electrical', 'mechanical', 'blink-electrical', 'blink-mechanical');
@@ -56,9 +56,14 @@ function updateDisplay(id) {
   if (m.status === 'Mechanical' && m.timer) el.classList.add('mechanical', 'blink-mechanical');
 }
 
+
 function updateStatus(id, status) {
+  const m = machines[id];
+  m.status = status;
   update(ref(db, 'machines/' + id), { status });
+  updateDisplay(id);
 }
+
 
 function startTimer(name) {
   const m = machines[name];
@@ -85,18 +90,8 @@ function startTimer(name) {
     isRunning: true,
     startTime: m.startTime
   });
+  generateGraph()
 }
-
-function updateDisplayTime(name, totalSeconds) {
-  const machineElement = document.querySelector(`[data-machine="${name}"] .timer`);
-  if (machineElement) {
-    const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
-    const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
-    const seconds = String(totalSeconds % 60).padStart(2, "0");
-    machineElement.textContent = `${hours}:${minutes}:${seconds}`;
-  }
-}
-
 
 function stopTimer(name) {
   const m = machines[name];
@@ -117,6 +112,7 @@ function stopTimer(name) {
   });
 
   updateDisplay(name); // final time display
+  generateGraph()
 }
 
 
@@ -127,6 +123,8 @@ function resetTimer(id) {
   const m = machines[id];
   m.electricalTime = 0;
   m.mechanicalTime = 0;
+  m.tempElectrical = 0;
+  m.tempMechanical = 0;
   m.status = "None";
 
   update(ref(db, 'machines/' + id), {
@@ -136,10 +134,11 @@ function resetTimer(id) {
     isRunning: false,
     startTime: null
   }).then(() => {
-    // ✅ Only update UI *after* Firebase confirms it's saved
-    updateDisplay(id);
+    updateDisplay(id); // Immediate update after Firebase confirms
+    generateGraph()
   });
 }
+
 
 
 function resetAllMachines() {
@@ -147,8 +146,6 @@ function resetAllMachines() {
 
   machineNames.forEach(name => {
     const m = machines[name];
-
-    // Stop and reset locally
     if (m.timer) {
       clearInterval(m.timer);
       m.timer = null;
@@ -156,9 +153,10 @@ function resetAllMachines() {
 
     m.electricalTime = 0;
     m.mechanicalTime = 0;
+    m.tempElectrical = 0;
+    m.tempMechanical = 0;
     m.status = "None";
 
-    // Update Firebase
     update(ref(db, 'machines/' + name), {
       electricalTime: 0,
       mechanicalTime: 0,
@@ -167,8 +165,10 @@ function resetAllMachines() {
       startTime: null
     });
 
-    updateDisplay(name); // ✅ Immediate UI update
+    updateDisplay(name);
   });
+  generateGraph()
+
 }
 
 
