@@ -274,13 +274,38 @@ select {
 
 @media (max-width: 480px) {
     #machine-container {
+        display: grid;
         grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 10px;
+        justify-items: center; /* centers cards horizontally */
+    }
+
+    .machine {
+        width: 100%;
+        max-width: 320px; /* keeps cards from getting too wide */
+        box-sizing: border-box;
     }
 
     h1 {
         margin-top: 25px;
-        font-size: 1.0em;
+        font-size: 1.1em;
+        text-align: center;
+    }
+
+    .timers p {
+        font-size: 0.9em;
+    }
+
+    select, button {
+        font-size: 0.9em;
+    }
+
+    .button-group {
+        flex-direction: column;
+        gap: 6px;
     }
 }
+
 
 
