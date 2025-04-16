@@ -44,8 +44,10 @@ function formatTime(seconds) {
 // Update timer display and styling
 function updateDisplay(id) {
   const m = machines[id];
-  document.getElementById(`electrical-${id}`).innerText = formatTime(m.electricalTime);
-  document.getElementById(`mechanical-${id}`).innerText = formatTime(m.mechanicalTime);
+
+  // Update the live time for electrical and mechanical timers
+  document.getElementById(`electrical-${id}`).innerText = formatTime(m.tempElectrical || m.electricalTime);
+  document.getElementById(`mechanical-${id}`).innerText = formatTime(m.tempMechanical || m.mechanicalTime);
 
   const el = document.getElementById(`machine-${id}`);
   el.classList.remove('electrical', 'mechanical', 'blink-electrical', 'blink-mechanical');
@@ -58,59 +60,118 @@ function updateStatus(id, status) {
   update(ref(db, 'machines/' + id), { status });
 }
 
-function startTimer(id) {
-  const m = machines[id];
-  if (m.timer || m.status === 'None') return;
+function startTimer(name) {
+  const m = machines[name];
+  if (m.timer || m.status === "None") return;
 
+  m.startTime = Date.now();
   m.timer = setInterval(() => {
-    if (m.status === 'Electrical') m.electricalTime++;
-    if (m.status === 'Mechanical') m.mechanicalTime++;
+    const elapsed = Math.floor((Date.now() - m.startTime) / 1000);
 
-    update(ref(db, 'machines/' + id), {
-      electricalTime: m.electricalTime,
-      mechanicalTime: m.mechanicalTime
-    });
+    // Update local UI values but don't save yet
+    if (m.status === "Electrical") {
+      m.tempElectrical = m.electricalTime + elapsed;
+    } else if (m.status === "Mechanical") {
+      m.tempMechanical = m.mechanicalTime + elapsed;
+    }
+
+    // Update the live time in the display for each machine
+    updateDisplay(name); // Updates the timers live
+
   }, 1000);
 
-  update(ref(db, 'machines/' + id), {
-    isRunning: true
+  // Save startTime and isRunning
+  update(ref(db, 'machines/' + name), {
+    isRunning: true,
+    startTime: m.startTime
   });
 }
 
-function stopTimer(id) {
-  clearInterval(machines[id].timer);
-  machines[id].timer = null;
+function updateDisplayTime(name, totalSeconds) {
+  const machineElement = document.querySelector(`[data-machine="${name}"] .timer`);
+  if (machineElement) {
+    const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+    const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+    const seconds = String(totalSeconds % 60).padStart(2, "0");
+    machineElement.textContent = `${hours}:${minutes}:${seconds}`;
+  }
+}
 
-  update(ref(db, 'machines/' + id), {
-    isRunning: false
+
+function stopTimer(name) {
+  const m = machines[name];
+  if (!m.timer) return;
+
+  clearInterval(m.timer);
+  m.timer = null;
+
+  const elapsed = Math.floor((Date.now() - m.startTime) / 1000);
+  if (m.status === "Electrical") m.electricalTime += elapsed;
+  if (m.status === "Mechanical") m.mechanicalTime += elapsed;
+
+  update(ref(db, "machines/" + name), {
+    isRunning: false,
+    startTime: null,
+    electricalTime: m.electricalTime,
+    mechanicalTime: m.mechanicalTime
   });
 
-  const el = document.getElementById(`machine-${id}`);
-  el.classList.remove('blink-electrical', 'blink-mechanical');
+  updateDisplay(name); // final time display
 }
+
 
 
 function resetTimer(id) {
   stopTimer(id);
+
+  const m = machines[id];
+  m.electricalTime = 0;
+  m.mechanicalTime = 0;
+  m.status = "None";
+
   update(ref(db, 'machines/' + id), {
     electricalTime: 0,
     mechanicalTime: 0,
     status: "None",
-    isRunning: false
+    isRunning: false,
+    startTime: null
+  }).then(() => {
+    // ✅ Only update UI *after* Firebase confirms it's saved
+    updateDisplay(id);
   });
 }
 
 
 function resetAllMachines() {
   if (currentRole !== "admin") return;
+
   machineNames.forEach(name => {
+    const m = machines[name];
+
+    // Stop and reset locally
+    if (m.timer) {
+      clearInterval(m.timer);
+      m.timer = null;
+    }
+
+    m.electricalTime = 0;
+    m.mechanicalTime = 0;
+    m.status = "None";
+
+    // Update Firebase
     update(ref(db, 'machines/' + name), {
       electricalTime: 0,
       mechanicalTime: 0,
-      status: "None"
+      status: "None",
+      isRunning: false,
+      startTime: null
     });
+
+    updateDisplay(name); // ✅ Immediate UI update
   });
 }
+
+
 
 function createMachineCard(id) {
   const div = document.createElement('div');
@@ -228,17 +289,33 @@ machineNames.forEach(name => {
     m.status = data.status || "None";
     m.electricalTime = data.electricalTime || 0;
     m.mechanicalTime = data.mechanicalTime || 0;
+    m.startTime = data.startTime || null;
     const isRunning = data.isRunning || false;
   
-    document.querySelector(`#machine-${name} select`).value = m.status;
-    updateDisplay(name);
+    // If running, update times and continue counting
+    if ((m.status === "Electrical" || m.status === "Mechanical") && isRunning && m.startTime) {
+      const elapsed = Math.floor((Date.now() - m.startTime) / 1000);
   
-    if ((m.status === "Electrical" || m.status === "Mechanical") && isRunning && !m.timer) {
+      if (m.status === "Electrical") {
+        m.electricalTime += elapsed;
+      } else if (m.status === "Mechanical") {
+        m.mechanicalTime += elapsed;
+      }
+  
+      // Update Firebase with caught-up times and reset startTime
+      update(ref(db, 'machines/' + name), {
+        electricalTime: m.electricalTime,
+        mechanicalTime: m.mechanicalTime,
+        startTime: Date.now()
+      });
+  
       startTimer(name);
-    } else if (!isRunning && m.timer) {
-      stopTimer(name);
+    } else {
+      // ✅ Even if not running, still show current saved time
+      updateDisplay(name);
     }
   });
+  
   
 });
 
