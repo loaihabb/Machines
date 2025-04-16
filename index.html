@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Machine Downtime Dashboard</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
   <img id="logo" src="https://jeddahcables.com/wp-content/uploads/2024/10/JCC-header-Logo.webp" alt="Logo" />
   <h1>Machine Downtime Dashboard</h1>
@@ -18,25 +20,35 @@
         <input type="password" id="password" placeholder="Password" />
       </div>
       <button id="login-button" onclick="login()">Login</button>
-
     </div>
-  
-
   </div>
-  
 
-<!-- Add this around your machine UI -->
-<div id="dashboard-section" style="display:none;">
+
+  <!-- Add this around your machine UI -->
+  <div id="dashboard-section" style="display:none;">
     <div id="buttons">
-    <button id="reset-all-btn" class="reset-btn-all" onclick="resetAllMachines()">Reset All Timers</button>
-    <div id="user-info" style="display: none;">
+      <button id="reset-all-btn" class="reset-btn-all" onclick="resetAllMachines()">Reset All Timers</button>
+      <div id="user-info" style="display: none;">
         <span id="user-role-label"></span>
         <button onclick="logout()" class="logout-btn">Logout</button>
       </div>
     </div>
     <div id="machine-container"></div>
+    <button id="generate-graph-btn" onclick="generateGraph()">Generate Graph</button>
+    <!-- Add this dropdown in your HTML -->
+    <select id="time-unit-selector" onchange="generateGraph()">
+      <option value="seconds">Seconds</option>
+      <option value="minutes">Minutes</option>
+      <option value="hours">Hours</option>
+    </select>
+
+    <canvas id="machineGraph" width="400" height="200" style="display:none;"></canvas>
+
   </div>
-  
+
   <script type="module" src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 </body>
+
 </html>

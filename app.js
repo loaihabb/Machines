@@ -203,6 +203,8 @@ window.startTimer = startTimer;
 window.stopTimer = stopTimer;
 window.resetTimer = resetTimer;
 window.resetAllMachines = resetAllMachines;
+window.generateGraph = generateGraph;
+
 
 // Init Machines
 machineNames.forEach(name => {
@@ -236,3 +238,95 @@ machineNames.forEach(name => {
   });
   
 });
+
+
+//GRAPH
+let machineChart = null; // Place this outside the function at the top of your script
+
+function generateGraph() {
+  const timeUnit = document.getElementById("time-unit-selector").value; // Get selected time unit (seconds, minutes, hours)
+  const machineNames = Object.keys(machines);
+
+  // Function to convert seconds to the selected time unit
+  function convertTime(timeInSeconds, unit) {
+    if (unit === 'minutes') {
+      return timeInSeconds / 60; // Convert to minutes
+    } else if (unit === 'hours') {
+      return timeInSeconds / 3600; // Convert to hours
+    }
+    return timeInSeconds; // Default is seconds
+  }
+
+  // Map machine names to their corresponding times in the selected unit
+  const electricalTimes = machineNames.map(name => convertTime(machines[name].electricalTime, timeUnit));
+  const mechanicalTimes = machineNames.map(name => convertTime(machines[name].mechanicalTime, timeUnit));
+
+  const ctx = document.getElementById('machineGraph').getContext('2d');
+
+  // Hide the generate button and show the graph
+  document.getElementById("generate-graph-btn").style.display = "none";
+  document.getElementById("machineGraph").style.display = "block";
+
+  // Set chart background color and opacity
+  const chartBackgroundColor = 'rgba(255, 255, 255, 0.8)'; // Slightly opaque white background for chart area
+  if (machineChart) {
+    machineChart.destroy();
+  }
+  // Create the chart with updated background color
+  machineChart = new Chart(ctx, {
+    type: 'bar', // Bar chart
+    data: {
+      labels: machineNames,
+      datasets: [{
+        label: 'Electrical Time (' + timeUnit + ')',
+        data: electricalTimes,
+        backgroundColor: 'rgba(54, 162, 235, 0.6)', // Blue for electrical, slightly more opaque
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }, {
+        label: 'Mechanical Time (' + timeUnit + ')',
+        data: mechanicalTimes,
+        backgroundColor: 'rgba(255, 99, 132, 0.6)', // Red for mechanical, slightly more opaque
+        borderColor: 'rgba(255, 99, 132, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: '#ffffff'  // White ticks on Y axis
+          },
+          grid: {
+            color: '#444' // Soft grid lines for contrast
+          }
+        },
+        x: {
+          ticks: {
+            color: '#ffffff'  // White ticks on X axis
+          },
+          grid: {
+            color: '#444' // Soft grid lines for contrast
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          labels: {
+            color: '#ffffff' // White text for legend labels
+          }
+        },
+        tooltip: {
+          backgroundColor: '#000',
+          titleColor: '#fff',
+          bodyColor: '#fff'
+        }
+      }
+    },    
+    // Background color for the canvas itself
+    backgroundColor: chartBackgroundColor
+  });
+}
+

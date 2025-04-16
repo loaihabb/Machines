@@ -241,8 +241,26 @@ select {
     font-size: 14px;
   }
   
-  
+  #time-unit-selector {
+    width: auto;
+    max-width: 200px;
+    padding: 6px 10px;
+    font-size: 10px;
+    margin: 10px;
+    cursor: pointer;
+  }
 
+  #generate-graph-btn {
+    background-color: #0056b3;
+    color: #fff;
+  }
+  #machineGraph {
+    width: auto;
+    max-width: 1400px;
+    background-color: rgba(30, 45, 65, 0.85); /* nice dark but readable */
+    color: #fff;
+    border-radius: 10px;
+  }
 @media (max-width: 768px) {
     #machine-container {
         grid-template-columns: repeat(2, 1fr);
