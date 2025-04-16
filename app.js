@@ -61,31 +61,45 @@ function updateStatus(id, status) {
 function startTimer(id) {
   const m = machines[id];
   if (m.timer || m.status === 'None') return;
+
   m.timer = setInterval(() => {
     if (m.status === 'Electrical') m.electricalTime++;
     if (m.status === 'Mechanical') m.mechanicalTime++;
+
     update(ref(db, 'machines/' + id), {
       electricalTime: m.electricalTime,
       mechanicalTime: m.mechanicalTime
     });
   }, 1000);
+
+  update(ref(db, 'machines/' + id), {
+    isRunning: true
+  });
 }
 
 function stopTimer(id) {
   clearInterval(machines[id].timer);
   machines[id].timer = null;
+
+  update(ref(db, 'machines/' + id), {
+    isRunning: false
+  });
+
   const el = document.getElementById(`machine-${id}`);
   el.classList.remove('blink-electrical', 'blink-mechanical');
 }
+
 
 function resetTimer(id) {
   stopTimer(id);
   update(ref(db, 'machines/' + id), {
     electricalTime: 0,
     mechanicalTime: 0,
-    status: "None"
+    status: "None",
+    isRunning: false
   });
 }
+
 
 function resetAllMachines() {
   if (currentRole !== "admin") return;
@@ -204,13 +218,21 @@ machineNames.forEach(name => {
   onValue(ref(db, 'machines/' + name), snapshot => {
     const data = snapshot.val();
     if (!data) return;
+  
     const m = machines[name];
     m.status = data.status || "None";
     m.electricalTime = data.electricalTime || 0;
     m.mechanicalTime = data.mechanicalTime || 0;
-
+    const isRunning = data.isRunning || false;
+  
     document.querySelector(`#machine-${name} select`).value = m.status;
     updateDisplay(name);
-    if (m.status !== "None" && !m.timer) startTimer(name);
+  
+    if ((m.status === "Electrical" || m.status === "Mechanical") && isRunning && !m.timer) {
+      startTimer(name);
+    } else if (!isRunning && m.timer) {
+      stopTimer(name);
+    }
   });
+  
 });
